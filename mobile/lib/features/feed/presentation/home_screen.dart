@@ -17,6 +17,7 @@ import '../../moments/data/post_repository.dart';
 import '../../moments/presentation/paw_moment_card.dart';
 import 'feed_controller.dart';
 import 'post_card.dart';
+import 'post_menu.dart';
 
 /// Inicio: estado del PawMoment, PawStreak y feed de amigos. La foto es protagonista;
 /// la gamificación acompaña.
@@ -141,7 +142,7 @@ class HomeScreen extends ConsumerWidget {
         final error = await ref.read(feedControllerProvider.notifier).toggleReaction(post);
         if (error != null && context.mounted) showPawToast(context, title: error, success: false);
       },
-      onDelete: post.isMine ? () => _delete(context, ref, post) : null,
+      menuActions: postMenuActions(context, ref, post, onDelete: () => _delete(context, ref, post)),
     );
   }
 

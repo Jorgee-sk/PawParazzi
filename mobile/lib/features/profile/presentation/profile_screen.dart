@@ -118,6 +118,13 @@ class ProfileScreen extends ConsumerWidget {
                 }
               },
             ),
+            const SizedBox(height: PawSpacing.s16),
+            Center(
+              child: TextButton(
+                onPressed: () => context.push(Routes.deleteAccount),
+                child: Text('Eliminar cuenta', style: PawText.caption13Semi.copyWith(color: PawColors.error)),
+              ),
+            ),
             const SizedBox(height: PawSpacing.s32),
           ],
         ),

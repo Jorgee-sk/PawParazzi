@@ -55,10 +55,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider);
     final expired = session is SignedOut && session.expired;
+    final accountDeleted = session is SignedOut && session.accountDeleted;
     return _AuthScaffold(
       title: 'Caza lo inesperado.',
       subtitle: 'No busques la foto perfecta. Caza el momento más inesperado de tu mascota.',
       children: [
+        if (accountDeleted && _error == null) ...[
+          const PawMessage.success(
+            title: 'Tu cuenta se ha eliminado',
+            body: 'Hemos borrado tu perfil, tus mascotas y tus fotos.',
+          ),
+          const SizedBox(height: PawSpacing.s16),
+        ],
         if (expired && _error == null) ...[
           const PawMessage(
             icon: PawIcons.info,

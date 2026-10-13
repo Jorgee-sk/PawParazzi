@@ -17,6 +17,7 @@ abstract final class Routes {
   static const compose = '/publicar';
   static const friends = '/amigos';
   static const editProfile = '/perfil/editar';
+  static const deleteAccount = '/perfil/eliminar-cuenta';
   static String comments(String postId) => '/publicaciones/$postId/comentarios';
   static const newPet = '/mascotas/nueva';
   static String pet(String id) => '/mascotas/$id';

@@ -30,16 +30,17 @@ así que en producción puede apuntar a cualquier proveedor S3 sin cambios de c�
 | `friendships` | Solicitudes y amistades |
 | `reactions` | Cariños (una por persona y publicación) |
 | `comments` | Comentarios de publicaciones visibles, paginados |
+| `safety` | Bloqueos entre personas y reportes de contenido |
 | `media.moderation` | Revisión automática de imágenes con proveedor intercambiable (`ImageModerator`) |
 
 Los controladores solo traducen HTTP; la lógica vive en servicios transaccionales. Las entidades JPA
 nunca se exponen: se devuelven DTO (`*Dtos`). Las referencias entre módulos son por UUID (sin
 relaciones JPA cruzadas) y las vistas se componen en lote (`PostAssembler`) para evitar N+1.
 
-### Modelo de datos (migraciones `V1`–`V6`)
+### Modelo de datos (migraciones `V1`–`V7`)
 
 `users`, `refresh_tokens`, `media_assets`, `pets`, `pet_tags`, `posts`, `post_pets`, `post_tags`,
-`daily_participations`, `paw_streaks`, `friend_requests`, `friendships`, `reactions`, `comments`.
+`daily_participations`, `paw_streaks`, `friend_requests`, `friendships`, `reactions`, `comments`, `blocks`, `reports`.
 Las tablas de fase 2 (misiones, grupos, recuerdos, logros…) se crearán con su funcionalidad.
 
 ### Reglas de negocio clave
@@ -69,6 +70,16 @@ Las tablas de fase 2 (misiones, grupos, recuerdos, logros…) se crearán con su
   `422 image_rejected` con el motivo. Si el servicio falla, `on-error` decide: `allow` (por defecto; la imagen
   se guarda como `UNCHECKED`) o `reject` (`503 moderation_unavailable`). No se infieren emociones ni salud.
 - **Comentarios**: los lee y escribe quien ve la publicación. Borra quien lo escribió o la autora de la publicación.
+- **Bloqueos**: bloquear rompe la amistad (y con ella toda la visibilidad mutua), cierra las solicitudes
+  pendientes e impide nuevas en cualquier sentido respondiendo `404 user_not_found`, para no revelar el bloqueo.
+  Los comentarios de personas bloqueadas se ocultan en publicaciones de terceros; el contador sí los incluye.
+  Desbloquear no restaura la amistad.
+- **Reportes**: de una publicación o comentario visible, o de una persona. Únicos por persona y objetivo.
+  `target_id` no tiene clave foránea para que el reporte sobreviva al borrado del contenido.
+- **Eliminación de cuenta** (`DELETE /users/me` con contraseña): borra en una transacción las publicaciones y
+  la persona (el resto cae en cascada) y, tras confirmarla, los ficheros de imagen. Los reportes se conservan
+  con `reporter_id` o `reported_user_id` a null. El access token aún vigente deja de servir porque la persona
+  ya no existe.
 - **Sesión**: access token JWT de 15 min; refresh token opaco de 30 días guardado como hash SHA-256 y
   rotado en cada uso. Reutilizar un refresh ya rotado revoca todas las sesiones.
 
@@ -87,6 +98,9 @@ Las tablas de fase 2 (misiones, grupos, recuerdos, logros…) se crearán con su
 | `POST·GET /friend-requests`, `POST /friend-requests/{id}/accept·reject`, `DELETE /friend-requests/{id}`, `GET /friends`, `DELETE /friends/{id}` | Amistades |
 | `PUT·DELETE /posts/{id}/reactions/me` | Cariños |
 | `GET·POST /posts/{id}/comments`, `DELETE /comments/{id}` | Comentarios |
+| `GET /blocks`, `PUT·DELETE /blocks/{userId}` | Bloqueos |
+| `POST /reports` | Reportes |
+| `DELETE /users/me` | Eliminar la cuenta |
 
 Errores: `{code, message, timestamp, fieldErrors?}` con códigos estables; nunca trazas.
 
@@ -110,7 +124,7 @@ features/  auth · profile · pets · media · moments · feed · gamification �
 
 ## Pruebas
 
-- Backend (JUnit 5, MockMvc, H2 en modo PostgreSQL con las mismas migraciones): autenticación, rotación
+- Backend (JUnit 5, MockMvc; H2 en modo PostgreSQL por defecto y PostgreSQL real en la integración continua): autenticación, rotación
   de tokens, validación, flujo social completo, visibilidad, idempotencia, racha, paginación, subida.
 - Flutter: redirecciones del router, refresh de sesión, idempotencia del publicador, widgets y estados
   de carga/vacío/error.

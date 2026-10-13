@@ -133,7 +133,7 @@ class ApiClient {
 
   Future<T> patch<T>(String path, {Object? data}) => _call(() => dio.patch<T>(path, data: data));
 
-  Future<T> delete<T>(String path) => _call(() => dio.delete<T>(path));
+  Future<T> delete<T>(String path, {Object? data}) => _call(() => dio.delete<T>(path, data: data));
 
   Future<List<int>> getBytes(String path) =>
       _call(() => dio.get<List<int>>(path, options: Options(responseType: ResponseType.bytes)));

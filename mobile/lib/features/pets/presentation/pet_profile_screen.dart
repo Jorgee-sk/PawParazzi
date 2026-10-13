@@ -13,7 +13,9 @@ import '../../../core/widgets/paw_icon.dart';
 import '../../../core/widgets/paw_message.dart';
 import '../../../core/widgets/paw_states.dart';
 import '../../../core/widgets/paw_tag.dart';
+import '../../feed/presentation/feed_controller.dart';
 import '../../feed/presentation/post_card.dart';
+import '../../feed/presentation/post_menu.dart';
 import '../../moments/data/post_models.dart';
 import '../../moments/data/post_repository.dart';
 import '../data/pet_models.dart';
@@ -59,6 +61,27 @@ class _PetProfileScreenState extends ConsumerState<PetProfileScreen> {
       setState(() => _postsError = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _deletePost(Post post) async {
+    final confirmed = await showPawConfirm(
+      context,
+      title: '¿Eliminar esta publicación?',
+      body: 'Se borrarán la foto y el texto para ti y tus amigos. Si era tu PawMoment, el día sigue contando en tu racha.',
+      confirmLabel: 'Eliminar publicación',
+      cancelLabel: 'Conservarla',
+    );
+    if (!confirmed) return;
+    try {
+      await ref.read(postRepositoryProvider).delete(post.id);
+      ref.read(feedControllerProvider.notifier).removePost(post.id);
+      ref.invalidate(todayMomentProvider);
+      if (!mounted) return;
+      setState(() => _posts.removeWhere((p) => p.id == post.id));
+      showPawToast(context, title: 'Publicación eliminada');
+    } on ApiException catch (e) {
+      if (mounted) showPawToast(context, title: e.message, success: false);
     }
   }
 
@@ -151,6 +174,7 @@ class _PetProfileScreenState extends ConsumerState<PetProfileScreen> {
             post: post,
             onToggleReaction: () => _toggle(post),
             onOpenComments: () => context.push(Routes.comments(post.id)),
+            menuActions: postMenuActions(context, ref, post, onDelete: () => _deletePost(post)),
           ),
           const SizedBox(height: PawSpacing.s32),
         ],

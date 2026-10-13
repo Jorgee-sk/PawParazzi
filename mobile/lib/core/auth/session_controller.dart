@@ -16,10 +16,13 @@ class SessionLoading extends SessionState {
 }
 
 class SignedOut extends SessionState {
-  const SignedOut({this.expired = false});
+  const SignedOut({this.expired = false, this.accountDeleted = false});
 
   /// La sesión caducó (no la cerró la persona): se muestra un aviso en el login.
   final bool expired;
+
+  /// La persona acaba de eliminar su cuenta: se confirma en el login.
+  final bool accountDeleted;
 }
 
 /// No se pudo comprobar la sesión (p. ej. sin red al abrir la app). No borra los tokens.
@@ -71,6 +74,12 @@ class SessionController extends Notifier<SessionState> {
   Future<void> logout() async {
     await ref.read(authRepositoryProvider).logout();
     state = const SignedOut();
+  }
+
+  /// La cuenta ya no existe en el servidor: solo queda borrar los tokens locales.
+  Future<void> accountDeleted() async {
+    await ref.read(apiClientProvider).clearTokens();
+    state = const SignedOut(accountDeleted: true);
   }
 
   Future<void> _loadMe({bool throwOnError = false}) async {

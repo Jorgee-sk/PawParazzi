@@ -69,6 +69,8 @@ pantallas frente a ellos.
 | Amistades | Header Detail, Input, Button compacto, Toast «Solicitud enviada», EmptyState | ✅ conectado |
 | Comentarios | Header Detail, UserAvatar, Input, Button compacto, EmptyState, ConfirmDialog | ✅ conectado |
 | Editar perfil | Header Detail, UserAvatar, Input, Button | ✅ conectado |
+| Reportar (hoja inferior) | Etiquetas seleccionables, Input, Button | ✅ conectado |
+| Eliminar cuenta | Header Detail, Mensaje contextual, Input, Button, ConfirmDialog | ✅ conectado |
 | Paw Hunt, Grupos | EmptyState + etiqueta «Fase futura · no disponible» | Marcadas explícitamente como no disponibles |
 
 ## Decisiones donde Figma no define el detalle
@@ -86,5 +88,8 @@ pantallas frente a ellos.
   animales. La pestaña «Cazar» pasa a «Capturar», el tipo «Caza libre» a «Foto libre», «Empezar a cazar» a
   «Entrar en PawParazzi». **Figma sigue con los nombres antiguos** (componentes Navigation y PostType): hay que
   actualizarlo allí. El lema «Caza lo inesperado» de la pantalla de inicio de sesión no se ha tocado.
+- **Menú «…» y hoja de reporte**: Figma no los define. El menú es una hoja inferior con la acción destructiva
+  en color de error y nombrando lo que hace; el reporte reutiliza etiquetas seleccionables, Input y Button.
+  Cerrar sesión y eliminar cuenta tienen confirmaciones separadas, como indica Figma.
 - **Pantallas anchas**: Figma solo define móvil (390 px); en web y tablet el contenido se centra con 560 px máx.
 - **Contenido demo** de Figma (Elena, Nube, Milo, fotos): no se incluye en la app. Los vacíos son reales.
