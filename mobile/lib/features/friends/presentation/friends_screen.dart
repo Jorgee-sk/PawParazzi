@@ -5,6 +5,7 @@ import '../../../core/auth/session_controller.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/widgets/paw_action_sheet.dart';
 import '../../../core/widgets/paw_avatar.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../core/widgets/paw_header.dart';
@@ -14,6 +15,8 @@ import '../../../core/widgets/paw_states.dart';
 import '../../../core/widgets/paw_text_field.dart';
 import '../../feed/presentation/feed_controller.dart';
 import '../../profile/data/user_models.dart';
+import '../../safety/data/safety_repository.dart';
+import '../../safety/presentation/safety_actions.dart';
 import '../data/friends_repository.dart';
 
 /// Solicitud de amistad → aceptación → publicaciones visibles en el feed.
@@ -74,6 +77,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   @override
   Widget build(BuildContext context) {
     final overview = ref.watch(friendsOverviewProvider);
+    final blocked = ref.watch(blockedUsersProvider);
     final repo = ref.read(friendsRepositoryProvider);
     final me = ref.watch(currentUserProvider);
 
@@ -81,7 +85,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           color: PawColors.plum,
-          onRefresh: () async => ref.invalidate(friendsOverviewProvider),
+          onRefresh: () async {
+            ref.invalidate(friendsOverviewProvider);
+            ref.invalidate(blockedUsersProvider);
+          },
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: PawSpacing.screen),
             children: [
@@ -115,6 +122,38 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   ),
                 _ => const Center(child: CircularProgressIndicator()),
               },
+              const SizedBox(height: PawSpacing.s24),
+              if (blocked case AsyncData(:final value) when value.isNotEmpty) ...[
+                const Text('Personas bloqueadas', style: PawText.heading22),
+                const SizedBox(height: PawSpacing.s16),
+                for (final person in value) ...[
+                  _PersonRow(
+                    person: person,
+                    subtitle: person.username != null ? '@${person.username}' : '',
+                    actions: [
+                      PawButton.secondary(
+                        label: 'Desbloquear',
+                        compact: true,
+                        expand: false,
+                        onPressed: () async {
+                          try {
+                            await ref.read(safetyRepositoryProvider).unblock(person.id);
+                            ref.invalidate(blockedUsersProvider);
+                            if (context.mounted) {
+                              showPawToast(context,
+                                  title: 'Has desbloqueado a ${person.name}',
+                                  body: 'Para volver a ser amigos hay que enviar una solicitud.');
+                            }
+                          } on ApiException catch (e) {
+                            if (context.mounted) showPawToast(context, title: e.message, success: false);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: PawSpacing.s12),
+                ],
+              ],
               const SizedBox(height: PawSpacing.s32),
             ],
           ),
@@ -147,6 +186,19 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   compact: true,
                   expand: false,
                   onPressed: () => _run(() => repo.reject(r.id)),
+                ),
+                PawIconButton(
+                  asset: PawIcons.ellipsis,
+                  semanticLabel: 'Más opciones para ${r.requester.name}',
+                  onPressed: () => showPawActionSheet(context, [
+                    PawSheetAction(
+                      label: 'Bloquear a ${r.requester.name}',
+                      subtitle: 'Se rechaza la solicitud y no podrá enviarte más.',
+                      destructive: true,
+                      onSelected: () =>
+                          confirmAndBlock(context, ref, userId: r.requester.id, name: r.requester.name),
+                    ),
+                  ]),
                 ),
               ],
             ),
@@ -187,19 +239,35 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             person: f,
             subtitle: f.username != null ? '@${f.username}' : '',
             actions: [
-              PawButton.secondary(
-                label: 'Eliminar',
-                compact: true,
-                expand: false,
-                onPressed: () async {
-                  final ok = await showPawConfirm(
-                    context,
-                    title: '¿Eliminar a ${f.name} de tus amigos?',
-                    body: 'Dejaréis de ver los momentos del otro. Podréis volver a enviaros una solicitud.',
-                    confirmLabel: 'Eliminar amistad',
-                  );
-                  if (ok) await _run(() => repo.remove(f.id), refreshFeed: true);
-                },
+              PawIconButton(
+                asset: PawIcons.ellipsis,
+                semanticLabel: 'Opciones de ${f.name}',
+                onPressed: () => showPawActionSheet(context, [
+                  PawSheetAction(
+                    label: 'Eliminar amistad',
+                    subtitle: 'Podréis volver a enviaros una solicitud.',
+                    destructive: true,
+                    onSelected: () async {
+                      final ok = await showPawConfirm(
+                        context,
+                        title: '¿Eliminar a ${f.name} de tus amigos?',
+                        body: 'Dejaréis de ver los momentos del otro. Podréis volver a enviaros una solicitud.',
+                        confirmLabel: 'Eliminar amistad',
+                      );
+                      if (ok) await _run(() => repo.remove(f.id), refreshFeed: true);
+                    },
+                  ),
+                  PawSheetAction(
+                    label: 'Reportar a ${f.name}',
+                    onSelected: () => showReportSheet(context, target: ReportTarget.user, targetId: f.id),
+                  ),
+                  PawSheetAction(
+                    label: 'Bloquear a ${f.name}',
+                    subtitle: 'No podrá enviarte solicitudes.',
+                    destructive: true,
+                    onSelected: () => confirmAndBlock(context, ref, userId: f.id, name: f.name),
+                  ),
+                ]),
               ),
             ],
           ),
@@ -226,17 +294,27 @@ class _PersonRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(PawRadius.r16),
         border: Border.all(color: PawColors.borderSubtle),
       ),
-      child: Row(children: [
-        UserAvatar(name: person.name, imageUrl: person.avatarUrl, size: 40),
-        const SizedBox(width: PawSpacing.s12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(person.name, style: PawText.body15Semi, overflow: TextOverflow.ellipsis),
-            if (subtitle.isNotEmpty) Text(subtitle, style: PawText.caption12, overflow: TextOverflow.ellipsis),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            UserAvatar(name: person.name, imageUrl: person.avatarUrl, size: 40),
+            const SizedBox(width: PawSpacing.s12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(person.name, style: PawText.body15Semi, overflow: TextOverflow.ellipsis),
+                if (subtitle.isNotEmpty) Text(subtitle, style: PawText.caption12, overflow: TextOverflow.ellipsis),
+              ]),
+            ),
+            if (actions.length == 1) actions.first,
           ]),
-        ),
-        ...actions,
-      ]),
+          // Con varias acciones van en su propia línea para no tapar el nombre en pantallas estrechas.
+          if (actions.length > 1) ...[
+            const SizedBox(height: PawSpacing.s8),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
+          ],
+        ],
+      ),
     );
   }
 }

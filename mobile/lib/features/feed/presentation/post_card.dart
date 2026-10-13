@@ -4,6 +4,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/utils/time_format.dart';
 import '../../../core/widgets/authed_image.dart';
+import '../../../core/widgets/paw_action_sheet.dart';
 import '../../../core/widgets/paw_avatar.dart';
 import '../../../core/widgets/paw_header.dart';
 import '../../../core/widgets/paw_icon.dart';
@@ -18,14 +19,16 @@ class PostCard extends StatelessWidget {
     required this.onToggleReaction,
     this.onOpenPet,
     this.onOpenComments,
-    this.onDelete,
+    this.menuActions = const [],
   });
 
   final Post post;
   final VoidCallback onToggleReaction;
   final ValueChanged<String>? onOpenPet;
   final VoidCallback? onOpenComments;
-  final VoidCallback? onDelete;
+
+  /// Opciones del menú "…" (eliminar si es propia; reportar y bloquear si es ajena).
+  final List<PawSheetAction> menuActions;
 
   String get _identity {
     final petNames = post.pets.map((p) => p.name).toList();
@@ -82,13 +85,13 @@ class PostCard extends StatelessWidget {
                   ),
                 ),
               ],
-              if (onDelete != null) ...[
+              if (menuActions.isNotEmpty) ...[
                 const SizedBox(width: 10),
                 PawIconButton(
                   asset: PawIcons.ellipsis,
                   semanticLabel: 'Opciones de la publicación',
                   background: PawColors.white,
-                  onPressed: () => _showOptions(context),
+                  onPressed: () => showPawActionSheet(context, menuActions),
                 ),
               ],
             ],
@@ -140,27 +143,6 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  Future<void> _showOptions(BuildContext context) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: PawColors.cream,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(PawSpacing.screen, 0, PawSpacing.screen, PawSpacing.s16),
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Eliminar publicación', style: PawText.body15Semi.copyWith(color: PawColors.error)),
-            subtitle: const Text('Se borran la foto y el texto.', style: PawText.caption13),
-            onTap: () {
-              Navigator.of(context).pop();
-              onDelete?.call();
-            },
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _CommentsButton extends StatelessWidget {

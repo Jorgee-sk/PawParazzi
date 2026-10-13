@@ -11,6 +11,7 @@ import '../../features/moments/presentation/capture_screen.dart';
 import '../../features/moments/presentation/compose_screen.dart';
 import '../../features/pets/presentation/pet_form_screen.dart';
 import '../../features/pets/presentation/pet_profile_screen.dart';
+import '../../features/profile/presentation/delete_account_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/onboarding_profile_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -98,6 +99,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.friends, builder: (_, _) => const FriendsScreen()),
       GoRoute(path: Routes.editProfile, builder: (_, _) => const EditProfileScreen()),
+      GoRoute(path: Routes.deleteAccount, builder: (_, _) => const DeleteAccountScreen()),
       GoRoute(
         path: '/publicaciones/:id/comentarios',
         builder: (_, state) => CommentsScreen(postId: state.pathParameters['id']!),

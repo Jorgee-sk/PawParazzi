@@ -18,7 +18,6 @@ Leyenda: ✅ hecho y verificado · 🟡 hecho pero sin verificar en el entorno r
 - ✅ `scripts/dev-services.ps1`: arranca los servicios y corrige el reenvío de puertos en Windows
 - ⬜ Los problemas de la máquina de Podman en Windows (cgroups y puertos, ver README) son del entorno, no del
   proyecto: revisar si desaparecen al actualizar Podman/WSL y, si es así, simplificar el script
-- ⬜ Ejecutar `S3StorageServiceIT` y los flujos contra PostgreSQL en CI (hoy la suite automática usa H2)
 - ✅ `.env.example`, README, ARCHITECTURE, sistema de diseño documentado desde Figma
 
 ## Fase 1 — MVP social
@@ -43,7 +42,12 @@ Leyenda: ✅ hecho y verificado · 🟡 hecho pero sin verificar en el entorno r
   rechaza fotos sin animal real y con violencia o contenido sexual. Verificado de extremo a extremo con Podman y
   con una muestra de 56 fotos de Wikimedia Commons (ver `moderation/README.md`)
 - ✅ Renombrado: «Cazar» → «Capturar», «Caza libre» → «Foto libre»
-- ⬜ **Siguiente bloque**: reportar contenido y bloquear personas
+- ✅ Reportar publicaciones, comentarios y personas (sin duplicados; los reportes sobreviven al borrado del contenido)
+- ✅ Bloquear y desbloquear: rompe la amistad, impide nuevas solicitudes y oculta comentarios
+- ✅ Eliminar la cuenta y todos sus datos (filas y ficheros), con contraseña y doble confirmación
+- ⬜ **Siguiente bloque**: servir las fotos con enlaces firmados en lugar de pasar por el backend, y limitar las
+  subidas simultáneas (ver «Preparación para producción»)
+- ⬜ Panel o herramienta para revisar reportes (hoy se revisan con SQL, ver README) y avisar a quien reportó
 - ⬜ Revisión de fotos: evaluar con un conjunto etiquetado a mano más grande (sobre todo violencia y contenido
   sexual, probados con pocos ejemplos); valorar un clasificador específico de desnudos si CLIP se queda corto;
   revisar también el texto de publicaciones y comentarios
@@ -51,9 +55,23 @@ Leyenda: ✅ hecho y verificado · 🟡 hecho pero sin verificar en el entorno r
 - ⬜ Visor de cámara integrado (hoy se usa la cámara del sistema vía `image_picker`)
 - ⬜ Recuperar foto tras cierre del proceso en Android (`retrieveLostData`) y borradores persistentes
 - ⬜ Notificación diaria configurable de PawMoment (FCM) y ajustes
-- ⬜ Proceso documentado de eliminación de cuenta
-- ⬜ Limpieza programada de imágenes subidas que nunca se publicaron
 - ⬜ Test de integración Flutter contra backend real; pruebas en dispositivos iOS/Android
+
+## Preparación para producción
+
+- ✅ Control de versiones (git) con ramas por funcionalidad
+- 🟡 Integración continua en GitHub Actions (backend sobre PostgreSQL y SeaweedFS, Flutter, Python). El flujo
+  está escrito y sus pasos del backend se han ejecutado en local contra PostgreSQL real, pero **no se ha
+  ejecutado en GitHub** porque el repositorio aún no tiene remoto
+- ⬜ Fotos servidas con enlaces firmados (y CDN) en lugar de pasar por el backend
+- ⬜ Límite de subidas simultáneas o cola de procesamiento de imágenes
+- ⬜ Almacenamiento con réplicas o gestionado (SeaweedFS de un nodo es solo para desarrollo)
+- ⬜ Límites de frecuencia compartidos entre instancias y también para subidas, comentarios y reportes
+- ⬜ Limpieza programada de sesiones caducadas e imágenes sin publicar
+- ⬜ Verificación de email y recuperación de contraseña
+- ⬜ Despliegue: HTTPS, perfil de producción (documentación de la API cerrada, orígenes permitidos), copias de
+  seguridad, monitorización y alertas
+- ⬜ Prueba de carga
 
 ## Fase 2 — Gamificación y comunidad
 

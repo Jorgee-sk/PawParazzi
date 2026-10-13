@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/session_controller.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/utils/time_format.dart';
+import '../../../core/widgets/paw_action_sheet.dart';
 import '../../../core/widgets/paw_avatar.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../core/widgets/paw_header.dart';
@@ -13,6 +15,8 @@ import '../../../core/widgets/paw_message.dart';
 import '../../../core/widgets/paw_states.dart';
 import '../../../core/widgets/paw_text_field.dart';
 import '../../feed/presentation/feed_controller.dart';
+import '../../safety/data/safety_repository.dart';
+import '../../safety/presentation/safety_actions.dart';
 import '../data/comments_repository.dart';
 
 /// Comentarios de una publicación (pantalla completa). El campo de texto queda fijo abajo y
@@ -139,6 +143,35 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
     }
   }
 
+  List<PawSheetAction> _actionsFor(Comment comment) {
+    final mine = comment.author.id == ref.read(currentUserProvider)?.id;
+    return [
+      if (comment.canDelete)
+        PawSheetAction(
+          label: 'Borrar comentario',
+          subtitle: mine ? null : 'Está en una publicación tuya.',
+          destructive: true,
+          onSelected: () => _delete(comment),
+        ),
+      if (!mine) ...[
+        PawSheetAction(
+          label: 'Reportar comentario',
+          onSelected: () => showReportSheet(context, target: ReportTarget.comment, targetId: comment.id),
+        ),
+        PawSheetAction(
+          label: 'Bloquear a ${comment.author.name}',
+          subtitle: 'Dejarás de ver sus comentarios.',
+          destructive: true,
+          onSelected: () async {
+            final blocked =
+                await confirmAndBlock(context, ref, userId: comment.author.id, name: comment.author.name);
+            if (blocked && mounted) setState(() => _comments.removeWhere((c) => c.author.id == comment.author.id));
+          },
+        ),
+      ],
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -215,17 +248,17 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
             onPressed: _loadingMore ? null : _loadMore,
           );
         }
-        return _CommentTile(comment: _comments[i], onDelete: () => _delete(_comments[i]));
+        return _CommentTile(comment: _comments[i], actions: _actionsFor(_comments[i]));
       },
     );
   }
 }
 
 class _CommentTile extends StatelessWidget {
-  const _CommentTile({required this.comment, required this.onDelete});
+  const _CommentTile({required this.comment, required this.actions});
 
   final Comment comment;
-  final VoidCallback onDelete;
+  final List<PawSheetAction> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -247,8 +280,12 @@ class _CommentTile extends StatelessWidget {
             ],
           ),
         ),
-        if (comment.canDelete)
-          PawIconButton(asset: PawIcons.ellipsis, semanticLabel: 'Borrar comentario', onPressed: onDelete),
+        if (actions.isNotEmpty)
+          PawIconButton(
+            asset: PawIcons.ellipsis,
+            semanticLabel: 'Opciones del comentario',
+            onPressed: () => showPawActionSheet(context, actions),
+          ),
       ],
     );
   }

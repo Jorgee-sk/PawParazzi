@@ -116,6 +116,31 @@ de perfil de una persona no necesita mostrar un animal.
 
 Cómo ajustarlo y qué limitaciones tiene: [moderation/README.md](moderation/README.md).
 
+## Reportes, bloqueos y eliminación de cuenta
+
+**Reportar y bloquear.** Desde el menú «…» de una publicación, un comentario o una amistad se puede reportar
+o bloquear. Bloquear rompe la amistad, impide nuevas solicitudes y oculta los comentarios de esa persona; no se
+le avisa. Se desbloquea desde **Perfil → Amigos y solicitudes**.
+
+**Revisar los reportes.** Todavía no hay panel de administración: los reportes se guardan en la tabla `reports`
+con estado `OPEN` y se revisan con una consulta. Para abrir una consola SQL:
+`podman exec -it pawparazzi_postgres_1 psql -U pawparazzi -d pawparazzi`
+
+```sql
+select r.created_at, r.target_type, r.reason, r.details, r.target_id, u.username as reportado
+from reports r left join users u on u.id = r.reported_user_id
+where r.status = 'OPEN' order by r.created_at;
+
+-- Tras revisarlo: RESOLVED si has actuado, DISMISSED si no procedía.
+update reports set status = 'RESOLVED' where id = '...';
+```
+
+**Eliminar la cuenta.** En **Perfil → Eliminar cuenta**, con la contraseña y una segunda confirmación. Es
+definitivo y borra en el momento: perfil, mascotas, publicaciones con sus fotos, comentarios, cariños, amistades,
+solicitudes, bloqueos, racha y sesiones, tanto las filas de la base de datos como los ficheros de imagen. Se
+conservan únicamente los reportes, ya sin referencia a la persona, como historial de moderación. Las copias de
+seguridad que existan de la base de datos no se modifican: caducan según su propia política de retención.
+
 ## Cómo comprobar que funciona
 
 | Qué | Dónde |
@@ -137,6 +162,12 @@ solicitud por nombre de usuario desde **Perfil → Amigos y solicitudes**.
 | Emulador de Android | `flutter run` (usa `http://10.0.2.2:8080` automáticamente) |
 | Móvil físico en la misma red | `flutter run --dart-define=API_BASE_URL=http://IP_DE_TU_PC:8080` |
 
+## Control de versiones e integración continua
+
+El proyecto está en git. `.github/workflows/ci.yml` ejecuta en cada push a `main` y en cada pull request los
+tests del backend contra PostgreSQL y SeaweedFS, y el análisis y los tests de Flutter. Para que funcione hay
+que subir el repositorio a GitHub (`git remote add origin ...` y `git push -u origin main`).
+
 ## Tests
 
 ```powershell
@@ -149,6 +180,9 @@ cd mobile
 flutter analyze
 flutter test
 ```
+
+Por defecto los tests del backend usan H2 en memoria. Para ejecutarlos contra PostgreSQL, como hace la
+integración continua, crea una base de datos vacía y define `TEST_DB_URL`, `TEST_DB_USER` y `TEST_DB_PASSWORD`.
 
 Test del almacenamiento contra SeaweedFS (con los servicios en marcha y los valores de tu `.env`):
 
