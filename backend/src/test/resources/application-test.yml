@@ -1,9 +1,11 @@
-# Configuración de tests: H2 en memoria (modo PostgreSQL) con las mismas migraciones Flyway.
+# Configuración de tests. Por defecto H2 en memoria (modo PostgreSQL) con las mismas migraciones Flyway.
+# Para ejecutarlos contra PostgreSQL real (como hace la integración continua), define TEST_DB_URL,
+# TEST_DB_USER y TEST_DB_PASSWORD apuntando a una base de datos vacía de pruebas.
 spring:
   datasource:
-    url: jdbc:h2:mem:pawparazzi-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
-    username: sa
-    password: ""
+    url: ${TEST_DB_URL:jdbc:h2:mem:pawparazzi-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1}
+    username: ${TEST_DB_USER:sa}
+    password: ${TEST_DB_PASSWORD:}
 
 pawparazzi:
   jwt:
@@ -11,6 +13,10 @@ pawparazzi:
     secret: test-only-secret-not-for-production-0123456789
   rate-limit:
     auth-requests-per-minute: 1000
+  # Valores fijos: los tests no deben depender de las variables de entorno de quien los ejecuta.
+  moderation:
+    provider: none
+    on-error: allow
   storage:
     provider: local
     local:
