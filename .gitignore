@@ -2,9 +2,10 @@
 .env
 *.env.local
 
-# Datos locales (H2, imágenes subidas en desarrollo)
-backend/data/
-data/
+# Datos locales (H2, imágenes subidas en desarrollo).
+# Con barra inicial a propósito: una regla "data/" a secas excluiría también las carpetas data/ del código.
+/backend/data/
+/data/
 
 # IDE
 .idea/
