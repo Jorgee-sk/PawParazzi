@@ -1,0 +1,23 @@
+# Secretos
+.env
+*.env.local
+
+# Datos locales (H2, imágenes subidas en desarrollo)
+backend/data/
+data/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Configuración local de herramientas
+.claude/settings.local.json
+
+# Python (scripts y servicio de revisión)
+__pycache__/
+*.pyc
+
+# Fichero que crea `podman machine ssh` desde Git Bash en Windows
+/NUL

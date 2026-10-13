@@ -1,0 +1,10 @@
+# Finales de línea: estos ficheros se usan dentro de contenedores Linux o los lee Flyway.
+*.sh text eol=lf
+*.py text eol=lf
+*.sql text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+Containerfile text eol=lf
+*.ps1 text eol=crlf
+*.ttf binary
+*.png binary

@@ -1,0 +1,34 @@
+# Servicio de revisión de fotos (CLIP en CPU). Se construye con Podman:
+#   podman build -t localhost/pawparazzi-moderation:latest moderation
+
+# --- Etapa 1: descarga el modelo y convierte las frases de prompts.py en vectores ---
+FROM docker.io/library/python:3.12-slim AS model
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+COPY requirements-build.txt .
+RUN pip install -r requirements-build.txt
+
+# Modelo fijado a una revisión concreta para que la construcción sea reproducible.
+# CLIP ViT-B/32 de OpenAI (licencia MIT), exportado a ONNX en el repositorio Xenova de Hugging Face.
+ARG MODEL_REPO=Xenova/clip-vit-base-patch32
+ARG MODEL_REVISION=d15189d7028b43f1d3e65039190477f6af591c2a
+COPY build_embeddings.py .
+RUN MODEL_REPO=$MODEL_REPO MODEL_REVISION=$MODEL_REVISION python build_embeddings.py fetch
+
+# Cambiar prompts.py solo repite este paso (segundos), no la descarga.
+COPY prompts.py .
+RUN python build_embeddings.py embed
+
+# --- Etapa 2: imagen final, solo con el modelo de visión y los vectores ---
+FROM docker.io/library/python:3.12-slim
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 MODEL_NAME=clip-vit-base-patch32
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY --from=model /app/model /app/model
+COPY app.py .
+
+RUN useradd --system --no-create-home moderation
+USER moderation
+EXPOSE 8000
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

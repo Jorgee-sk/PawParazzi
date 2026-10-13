@@ -1,0 +1,78 @@
+# Servicios locales de PawParazzi para Podman: PostgreSQL, SeaweedFS (almacenamiento compatible con S3)
+# y el servicio de revisión de fotos.
+#
+#   cp .env.example .env        # rellena DB_PASSWORD, S3_ACCESS_KEY, S3_SECRET_KEY
+#   podman compose up -d        # o: podman-compose up -d
+#
+# Notas para Podman:
+# - Imágenes con nombre completo (registro incluido): Podman no resuelve nombres cortos sin preguntar.
+# - Volúmenes con nombre: funcionan en modo rootless sin ajustes de SELinux.
+# - Puertos > 1024: no requieren privilegios en modo rootless.
+# - Versiones fijadas para que el entorno sea reproducible.
+name: pawparazzi
+
+# podman-compose agrupa por defecto los servicios en un pod; en Podman 6 sobre WSL eso falla al crear
+# el cgroup del pod ("unable to create pod cgroup"). No hace falta: los servicios ya comparten red.
+x-podman:
+  in_pod: false
+
+services:
+  postgres:
+    image: docker.io/library/postgres:17.11-alpine
+    environment:
+      POSTGRES_DB: pawparazzi
+      POSTGRES_USER: ${DB_USER:-pawparazzi}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pawparazzi} -d pawparazzi"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # SeaweedFS (Apache 2.0) en modo "todo en uno" con gateway S3 en el puerto 8333.
+  # Las credenciales se leen de AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (identidad administradora).
+  # El bucket lo crea el backend al arrancar si S3_CREATE_BUCKET=true.
+  seaweedfs:
+    image: docker.io/chrislusf/seaweedfs:4.48
+    command: ["server", "-ip.bind=0.0.0.0", "-s3", "-s3.port=8333"]
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?Define S3_ACCESS_KEY en .env}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?Define S3_SECRET_KEY en .env}
+    ports:
+      - "8333:8333"
+    volumes:
+      - seaweedfs-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8333/healthz > /dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # Revisión automática de fotos: modelo abierto CLIP en CPU, sin coste por foto (carpeta moderation/).
+  # La primera vez se construye la imagen y descarga el modelo (unos 600 MB); después arranca en segundos.
+  # El backend lo usa con MODERATION_PROVIDER=local. Necesita alrededor de 1 GB de memoria.
+  moderation:
+    build:
+      context: ./moderation
+      dockerfile: Containerfile
+    image: localhost/pawparazzi-moderation:latest
+    environment:
+      MODEL_THREADS: ${MODERATION_THREADS:-2}
+    ports:
+      - "8090:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  seaweedfs-data:

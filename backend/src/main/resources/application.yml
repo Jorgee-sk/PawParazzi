@@ -1,0 +1,100 @@
+spring:
+  application:
+    name: pawparazzi-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/pawparazzi}
+    username: ${DB_USER:pawparazzi}
+    password: ${DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        default_batch_fetch_size: 50
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+pawparazzi:
+  jwt:
+    # Obligatorio: mínimo 32 bytes. Nunca lo subas al repositorio (ver .env.example).
+    secret: ${JWT_SECRET:}
+    issuer: pawparazzi
+    access-token-ttl: PT15M
+    refresh-token-ttl: P30D
+  cors:
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
+  rate-limit:
+    auth-requests-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:20}
+  storage:
+    # local | s3 (SeaweedFS en local con Podman; cualquier proveedor S3 en producción)
+    provider: ${STORAGE_PROVIDER:local}
+    local:
+      root: ${STORAGE_LOCAL_ROOT:./data/media}
+    s3:
+      endpoint: ${S3_ENDPOINT:http://localhost:8333}
+      region: ${S3_REGION:us-east-1}
+      bucket: ${S3_BUCKET:pawparazzi-media}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
+      path-style-access: ${S3_PATH_STYLE:true}
+      create-bucket-if-missing: ${S3_CREATE_BUCKET:false}
+  media:
+    max-upload-bytes: 10485760
+    max-pixels: 50000000
+    max-dimension: 2048
+    thumbnail-dimension: 480
+    jpeg-quality: 0.85
+  moderation:
+    # Revisión automática de las fotos antes de guardarlas: ¿hay un animal?, ¿violencia o contenido sexual?
+    # none = sin revisión (las fotos quedan como UNCHECKED)
+    # local = servicio propio con un modelo abierto (contenedor "moderation" de compose.yaml)
+    provider: ${MODERATION_PROVIDER:none}
+    # Si el servicio falla o no responde: allow = se acepta sin revisar | reject = se rechaza la subida
+    on-error: ${MODERATION_ON_ERROR:allow}
+    local:
+      url: ${MODERATION_URL:http://localhost:8090}
+      timeout: PT10S
+      # Puntuaciones entre 0 y 1. Animal: a partir de aquí se considera que hay un animal.
+      # Violencia y contenido sexual: a partir de aquí se rechaza (altos para no rechazar fotos normales).
+      animal-threshold: ${MODERATION_ANIMAL_THRESHOLD:0.5}
+      violence-threshold: ${MODERATION_VIOLENCE_THRESHOLD:0.85}
+      sexual-threshold: ${MODERATION_SEXUAL_THRESHOLD:0.85}
+  pawmoment:
+    # La ventana diaria empieza a una hora determinista entre earliest-start y latest-start
+    # (hora local de cada persona) y dura window-duration. Nunca bloquea la publicación.
+    earliest-start: "10:00"
+    latest-start: "20:00"
+    window-duration: PT30M

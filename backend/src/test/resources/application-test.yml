@@ -1,0 +1,17 @@
+# Configuración de tests: H2 en memoria (modo PostgreSQL) con las mismas migraciones Flyway.
+spring:
+  datasource:
+    url: jdbc:h2:mem:pawparazzi-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+
+pawparazzi:
+  jwt:
+    # Valor ficticio solo para tests, no es una credencial real.
+    secret: test-only-secret-not-for-production-0123456789
+  rate-limit:
+    auth-requests-per-minute: 1000
+  storage:
+    provider: local
+    local:
+      root: ${java.io.tmpdir}/pawparazzi-test-media
