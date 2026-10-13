@@ -40,7 +40,7 @@ public class Friendship {
      * (PostgreSQL y H2 comparan UUID como bytes sin signo), por eso no usamos UUID.compareTo,
      * que compara con signo.
      */
-    static UUID[] ordered(UUID a, UUID b) {
+    public static UUID[] ordered(UUID a, UUID b) {
         return unsignedCompare(a, b) < 0 ? new UUID[]{a, b} : new UUID[]{b, a};
     }
 

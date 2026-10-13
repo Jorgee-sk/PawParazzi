@@ -1,6 +1,7 @@
 package com.pawparazzi.friendships;
 
 import com.pawparazzi.common.error.ApiException;
+import com.pawparazzi.safety.BlockRepository;
 import com.pawparazzi.users.User;
 import com.pawparazzi.users.UserDirectory;
 import com.pawparazzi.users.UserDtos.UserSummary;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Si ya existe una solicitud pendiente en sentido contrario, enviar otra la acepta.</li>
  *   <li>Reenviar una solicitud pendiente es idempotente (devuelve la existente).</li>
  *   <li>Solo la persona destinataria acepta o rechaza; solo quien la envió la cancela.</li>
+ *   <li>Si hay un bloqueo entre ambas personas (en cualquier sentido) no se pueden enviar solicitudes.</li>
  * </ul>
  */
 @Service
@@ -38,14 +40,16 @@ public class FriendshipService {
     private final FriendRequestRepository requests;
     private final UserRepository users;
     private final UserDirectory directory;
+    private final BlockRepository blocks;
     private final Clock clock;
 
     public FriendshipService(FriendshipRepository friendships, FriendRequestRepository requests,
-                             UserRepository users, UserDirectory directory, Clock clock) {
+                             UserRepository users, UserDirectory directory, BlockRepository blocks, Clock clock) {
         this.friendships = friendships;
         this.requests = requests;
         this.users = users;
         this.directory = directory;
+        this.blocks = blocks;
         this.clock = clock;
     }
 
@@ -72,6 +76,10 @@ public class FriendshipService {
         UUID addresseeId = addressee.getId();
         if (addresseeId.equals(requesterId)) {
             throw ApiException.badRequest("self_request", "No puedes enviarte una solicitud a tu propia cuenta.");
+        }
+        if (blocks.existsBetween(requesterId, addresseeId)) {
+            // Misma respuesta que si no existiera: no se revela quién ha bloqueado a quién.
+            throw ApiException.notFound("user_not_found", "No encontramos a nadie con ese usuario.");
         }
         if (areFriends(requesterId, addresseeId)) {
             throw ApiException.conflict("already_friends", "Ya sois amigos.");
