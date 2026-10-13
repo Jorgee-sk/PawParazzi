@@ -60,9 +60,8 @@ Leyenda: ✅ hecho y verificado · 🟡 hecho pero sin verificar en el entorno r
 ## Preparación para producción
 
 - ✅ Control de versiones (git) con ramas por funcionalidad
-- 🟡 Integración continua en GitHub Actions (backend sobre PostgreSQL y SeaweedFS, Flutter, Python). El flujo
-  está escrito y sus pasos del backend se han ejecutado en local contra PostgreSQL real, pero **no se ha
-  ejecutado en GitHub** porque el repositorio aún no tiene remoto
+- ✅ Integración continua en GitHub Actions (backend sobre PostgreSQL y SeaweedFS, Flutter, Python), en verde en
+  `github.com/Jorgee-sk/PawParazzi`
 - ⬜ Fotos servidas con enlaces firmados (y CDN) en lugar de pasar por el backend
 - ⬜ Límite de subidas simultáneas o cola de procesamiento de imágenes
 - ⬜ Almacenamiento con réplicas o gestionado (SeaweedFS de un nodo es solo para desarrollo)
