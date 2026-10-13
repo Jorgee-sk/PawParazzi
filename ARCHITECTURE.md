@@ -59,9 +59,16 @@ Las tablas de fase 2 (misiones, grupos, recuerdos, logros…) se crearán con su
 - **Idempotencia**: cada publicación lleva `clientRequestId` (único por autor). Un reintento devuelve la
   publicación existente (`200`, `replayed=true`) sin contar racha. Las participaciones se serializan con
   bloqueo de fila sobre `paw_streaks` + restricción única `(user_id, local_date)`.
-- **Imágenes**: tipo detectado por firma binaria (JPEG/PNG), límite de 10 MB y 50 MP, orientación EXIF
-  aplicada, re-codificación JPEG sin metadatos (elimina EXIF/GPS), versión ≤2048 px y miniatura ≤480 px.
-  Se sirven por `/api/v1/media/{id}` con autorización (propietaria o amistad).
+- **Imágenes (subida)**: tipo detectado por firma binaria (JPEG/PNG), límite de 10 MB y 50 MP, orientación EXIF
+  aplicada, re-codificación JPEG sin metadatos (elimina EXIF/GPS), versión ≤2048 px y miniatura ≤480 px. El
+  procesado ocurre fuera de la transacción y con un máximo de imágenes a la vez (`max-concurrent-processing`);
+  sin hueco tras `processing-wait` responde `503 server_busy`.
+- **Imágenes (descarga)**: el backend no sirve los bytes con el token de sesión. Cada DTO lleva un enlace
+  firmado que caduca (`MediaLinks`, `link-ttl`): con S3, un enlace prefirmado al almacenamiento (firmado para
+  `public-endpoint`); con almacenamiento local, `/api/v1/media/{id}/content?variant&exp&sig` con HMAC-SHA256
+  (clave derivada del secreto de la aplicación), servido en streaming. Los enlaces solo se emiten para quien
+  puede ver la imagen. `POST /media/links/refresh` renueva uno caducado volviendo a aplicar la política de
+  acceso (persona propietaria o amistad; lo ajeno, 404). Un enlace ya emitido vale hasta caducar.
 - **Revisión de fotos** (`pawparazzi.moderation.provider`): `none` o `local`. Con `local`, el backend envía la
   miniatura por HTTP al servicio `moderation/` (Python, FastAPI, ONNX Runtime, modelo CLIP ViT-B/32), que
   devuelve tres puntuaciones de 0 a 1: `animal`, `violence`, `sexual`. El servicio solo puntúa; los umbrales y
@@ -90,7 +97,7 @@ Las tablas de fase 2 (misiones, grupos, recuerdos, logros…) se crearán con su
 | `POST /auth/register · /auth/login · /auth/refresh · /auth/logout` | Sesión |
 | `GET·PATCH /users/me` | Perfil propio |
 | `GET·POST /pets`, `GET·PUT·DELETE /pets/{id}`, `GET /users/{id}/pets` | Mascotas |
-| `POST /media` (multipart, `purpose`), `GET /media/{id}?variant=thumb` | Imágenes |
+| `POST /media` (multipart, `purpose`), `GET /media/{id}/content` (enlace firmado), `POST /media/links/refresh` | Imágenes |
 | `POST /posts`, `GET·PATCH·DELETE /posts/{id}` | Publicaciones |
 | `GET /feed/friends?cursor&limit`, `GET /pets/{id}/posts` | Feeds paginados por cursor |
 | `GET /moments/today` | Ventana y participación de hoy |
@@ -118,8 +125,8 @@ features/  auth · profile · pets · media · moments · feed · gamification �
 - **Navegación**: `redirectFor` (función pura y testeada) lleva de sesión → perfil → primera mascota → Inicio.
   `StatefulShellRoute` para las 5 pestañas; captura y publicación a pantalla completa.
 - **Red**: `ApiClient` añade el token, renueva la sesión una sola vez ante 401 (peticiones concurrentes
-  comparten la renovación) y reintenta. Las imágenes privadas se descargan con el cliente autenticado
-  y se cachean en memoria (LRU).
+  comparten la renovación) y reintenta. Las imágenes se descargan con su enlace firmado, sin el token de
+  sesión, y se cachean en memoria (LRU) por la ruta del enlace; si caduca, `MediaCache` pide otro y reintenta.
 - **Publicación**: `PostPublisher` conserva `clientRequestId` y la imagen subida entre reintentos.
 
 ## Pruebas

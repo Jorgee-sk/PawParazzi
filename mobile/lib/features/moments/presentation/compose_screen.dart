@@ -276,6 +276,9 @@ class _ErrorBlock extends StatelessWidget {
     if (error.code == 'image_rejected') {
       return PawMessage(icon: PawIcons.info, title: 'No podemos publicar esta foto', body: error.message);
     }
+    if (error.code == 'server_busy') {
+      return PawMessage(icon: PawIcons.cloudOff, title: 'Tu foto está a salvo', body: error.message);
+    }
     if (error.isNetwork || error.statusCode == null || error.statusCode! >= 500) {
       return const PawMessage(
         icon: PawIcons.cloudOff,

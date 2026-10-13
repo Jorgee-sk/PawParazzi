@@ -68,18 +68,12 @@ class _PetFormScreenState extends ConsumerState<PetFormScreen> {
       _species = pet.species;
       _tags.addAll(pet.tags);
       _existingPhotoUrl = pet.photoThumbnailUrl;
-      _existingPhotoId = _mediaIdFromUrl(pet.photoUrl);
+      _existingPhotoId = pet.photoMediaId;
     } on ApiException catch (e) {
       _error = e.message;
     } finally {
       if (mounted) setState(() => _loadingPet = false);
     }
-  }
-
-  static String? _mediaIdFromUrl(String? url) {
-    if (url == null) return null;
-    final segments = Uri.parse(url).pathSegments;
-    return segments.isEmpty ? null : segments.last;
   }
 
   @override

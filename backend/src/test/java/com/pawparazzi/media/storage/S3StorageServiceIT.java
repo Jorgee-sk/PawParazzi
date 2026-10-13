@@ -3,7 +3,12 @@ package com.pawparazzi.media.storage;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.pawparazzi.common.config.AppProperties;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -19,11 +24,11 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 class S3StorageServiceIT {
 
     @Test
-    void createsBucketAndStoresReadsAndDeletesObjects() {
+    void createsBucketAndStoresReadsAndDeletesObjects() throws Exception {
         String bucket = "pawparazzi-it-" + UUID.randomUUID().toString().substring(0, 8);
         AppProperties props = new AppProperties(null, null, null,
                 new AppProperties.Storage("s3", null, new AppProperties.Storage.S3(
-                        System.getenv("S3_IT_ENDPOINT"), "us-east-1", bucket,
+                        System.getenv("S3_IT_ENDPOINT"), null, "us-east-1", bucket,
                         System.getenv("S3_ACCESS_KEY"), System.getenv("S3_SECRET_KEY"), true, true)),
                 null, null, null);
         S3StorageService storage = new S3StorageService(props);
@@ -33,6 +38,23 @@ class S3StorageServiceIT {
 
             assertThat(storage.get("media/u/1.jpg")).contains(content);
             assertThat(storage.get("media/u/no-existe.jpg")).isEmpty();
+
+            try (var object = storage.open("media/u/1.jpg").orElseThrow().stream()) {
+                assertThat(object.readAllBytes()).isEqualTo(content);
+            }
+
+            // El enlace prefirmado se descarga sin credenciales; sin firma, el almacenamiento lo rechaza.
+            String link = storage.presignedGetUrl("media/u/1.jpg", Duration.ofMinutes(5)).orElseThrow();
+            assertThat(link).startsWith(System.getenv("S3_IT_ENDPOINT")).contains("X-Amz-Signature=");
+            HttpClient http = HttpClient.newHttpClient();
+            HttpResponse<byte[]> signed = http.send(HttpRequest.newBuilder(URI.create(link)).build(),
+                    HttpResponse.BodyHandlers.ofByteArray());
+            assertThat(signed.statusCode()).isEqualTo(200);
+            assertThat(signed.body()).isEqualTo(content);
+            HttpResponse<byte[]> unsigned = http.send(
+                    HttpRequest.newBuilder(URI.create(link.substring(0, link.indexOf('?')))).build(),
+                    HttpResponse.BodyHandlers.ofByteArray());
+            assertThat(unsigned.statusCode()).isIn(401, 403);
 
             storage.delete("media/u/1.jpg");
             assertThat(storage.get("media/u/1.jpg")).isEmpty();

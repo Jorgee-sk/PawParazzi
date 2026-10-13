@@ -45,8 +45,9 @@ Leyenda: ✅ hecho y verificado · 🟡 hecho pero sin verificar en el entorno r
 - ✅ Reportar publicaciones, comentarios y personas (sin duplicados; los reportes sobreviven al borrado del contenido)
 - ✅ Bloquear y desbloquear: rompe la amistad, impide nuevas solicitudes y oculta comentarios
 - ✅ Eliminar la cuenta y todos sus datos (filas y ficheros), con contraseña y doble confirmación
-- ⬜ **Siguiente bloque**: servir las fotos con enlaces firmados en lugar de pasar por el backend, y limitar las
-  subidas simultáneas (ver «Preparación para producción»)
+- ✅ Fotos con enlaces firmados que caducan: la app las descarga del almacenamiento sin pasar por el backend
+- ✅ Límite de fotos procesándose a la vez al subir (`503 server_busy` y reintento en la app)
+- ⬜ **Siguiente bloque**: verificación de email y recuperación de contraseña
 - ⬜ Panel o herramienta para revisar reportes (hoy se revisan con SQL, ver README) y avisar a quien reportó
 - ⬜ Revisión de fotos: evaluar con un conjunto etiquetado a mano más grande (sobre todo violencia y contenido
   sexual, probados con pocos ejemplos); valorar un clasificador específico de desnudos si CLIP se queda corto;
@@ -62,8 +63,12 @@ Leyenda: ✅ hecho y verificado · 🟡 hecho pero sin verificar en el entorno r
 - ✅ Control de versiones (git) con ramas por funcionalidad
 - ✅ Integración continua en GitHub Actions (backend sobre PostgreSQL y SeaweedFS, Flutter, Python), en verde en
   `github.com/Jorgee-sk/PawParazzi`
-- ⬜ Fotos servidas con enlaces firmados (y CDN) en lugar de pasar por el backend
-- ⬜ Límite de subidas simultáneas o cola de procesamiento de imágenes
+- ✅ Fotos servidas con enlaces firmados directamente desde el almacenamiento (verificado con SeaweedFS y desde
+  un navegador en otro origen)
+- ✅ Límite de subidas procesándose a la vez; el procesado ya no retiene una conexión a la base de datos
+- ⬜ CDN delante del almacenamiento (los enlaces prefirmados cambian en cada respuesta, así que una CDN no los
+  cachea tal cual: harán falta cookies o URLs firmadas de la propia CDN)
+- ⬜ Cola de procesamiento de imágenes si el límite simultáneo se queda corto
 - ⬜ Almacenamiento con réplicas o gestionado (SeaweedFS de un nodo es solo para desarrollo)
 - ⬜ Límites de frecuencia compartidos entre instancias y también para subidas, comentarios y reportes
 - ⬜ Limpieza programada de sesiones caducadas e imágenes sin publicar

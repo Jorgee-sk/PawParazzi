@@ -32,13 +32,24 @@ public record AppProperties(
          * @param createBucketIfMissing crea el bucket al arrancar si no existe (útil en desarrollo con
          *                              SeaweedFS; en producción el bucket debería aprovisionarse aparte).
          */
-        public record S3(String endpoint, String region, String bucket, String accessKey, String secretKey,
-                         boolean pathStyleAccess, boolean createBucketIfMissing) {
+        /**
+         * @param publicEndpoint        dirección con la que los clientes (app, navegador) llegan al
+         *                              almacenamiento; puede ser una CDN. Los enlaces prefirmados se emiten
+         *                              para este host. Si está vacío se usa {@code endpoint}.
+         */
+        public record S3(String endpoint, String publicEndpoint, String region, String bucket, String accessKey,
+                         String secretKey, boolean pathStyleAccess, boolean createBucketIfMissing) {
         }
     }
 
+    /**
+     * @param linkTtl                 validez de los enlaces firmados a las imágenes
+     * @param maxConcurrentProcessing imágenes que se decodifican y re-codifican a la vez (consume memoria)
+     * @param processingWait          cuánto espera una subida a que haya hueco antes de responder 503
+     */
     public record Media(long maxUploadBytes, long maxPixels, int maxDimension, int thumbnailDimension,
-                        float jpegQuality) {
+                        float jpegQuality, Duration linkTtl, int maxConcurrentProcessing,
+                        Duration processingWait) {
     }
 
     /**

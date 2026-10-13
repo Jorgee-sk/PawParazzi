@@ -43,6 +43,18 @@ public class LocalStorageService implements StorageService {
     }
 
     @Override
+    public Optional<StoredObject> open(String key) {
+        Path path = resolve(key);
+        try {
+            return Optional.of(new StoredObject(Files.newInputStream(path), Files.size(path)));
+        } catch (NoSuchFileException e) {
+            return Optional.empty();
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo abrir el fichero", e);
+        }
+    }
+
+    @Override
     public void delete(String key) {
         try {
             Files.deleteIfExists(resolve(key));

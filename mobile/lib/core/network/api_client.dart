@@ -135,8 +135,13 @@ class ApiClient {
 
   Future<T> delete<T>(String path, {Object? data}) => _call(() => dio.delete<T>(path, data: data));
 
-  Future<List<int>> getBytes(String path) =>
-      _call(() => dio.get<List<int>>(path, options: Options(responseType: ResponseType.bytes)));
+  /// Descarga con un enlace firmado (relativo a la API o absoluto, hacia el almacenamiento).
+  /// No envía el token de sesión: la firma del enlace es la autorización, y el almacenamiento
+  /// rechazaría una petición con dos credenciales.
+  Future<List<int>> getPublicBytes(String url) => _call(() => dio.get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes, extra: {skipAuthKey: true}),
+      ));
 
   Options _opts(bool auth) => Options(extra: {skipAuthKey: !auth});
 

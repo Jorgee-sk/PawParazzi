@@ -76,7 +76,6 @@ class MvpSocialFlowTest extends ApiTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items.length()").value(0));
         mvc.perform(auth(get("/api/v1/posts/" + momentId), dani.token())).andExpect(status().isNotFound());
-        mvc.perform(auth(get("/api/v1/media/" + photo1), dani.token())).andExpect(status().isNotFound());
         mvc.perform(auth(get("/api/v1/pets/" + nube), dani.token())).andExpect(status().isNotFound());
         mvc.perform(auth(put("/api/v1/posts/" + momentId + "/reactions/me"), dani.token()))
                 .andExpect(status().isNotFound());
@@ -105,8 +104,10 @@ class MvpSocialFlowTest extends ApiTestSupport {
                 .andExpect(jsonPath("$.items[1].author.username").value(elena.username()))
                 .andExpect(jsonPath("$.items[1].author.email").doesNotExist())
                 .andExpect(jsonPath("$.items[1].isMine").value(false));
-        mvc.perform(auth(get("/api/v1/media/" + photo1 + "?variant=thumb"), dani.token()))
-                .andExpect(status().isOk());
+        // El feed de Dani trae un enlace firmado a la foto, que se descarga sin token.
+        String imageUrl = body(mvc.perform(auth(get("/api/v1/feed/friends"), dani.token())))
+                .at("/items/1/image/thumbnailUrl").asText();
+        mvc.perform(get(imageUrl)).andExpect(status().isOk());
         mvc.perform(auth(get("/api/v1/pets/" + nube + "/posts"), dani.token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items.length()").value(2));

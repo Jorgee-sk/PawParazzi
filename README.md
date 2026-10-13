@@ -102,6 +102,21 @@ powershell -ExecutionPolicy Bypass -File scripts\dev-services.ps1 -Down
 Los datos se conservan para la próxima vez. Para borrarlos y empezar de cero:
 `python -m podman_compose down -v`.
 
+## Cómo se sirven las fotos
+
+Las fotos son privadas, pero no pasan por el backend. Cada respuesta de la API incluye, para cada imagen, un
+**enlace firmado que caduca** (6 horas por defecto, `MEDIA_LINK_TTL`), y la app la descarga directamente del
+almacenamiento. Si el enlace ha caducado, la app pide otro y el backend vuelve a comprobar el permiso.
+
+- Con `STORAGE_PROVIDER=s3` el enlace apunta al almacenamiento (`S3_PUBLIC_ENDPOINT`; en producción, el dominio
+  público o una CDN). Esa dirección debe ser accesible desde los móviles de la gente.
+- Con almacenamiento local (modo rápido) el enlace apunta a la propia API, que lo sirve en streaming.
+- Quien tenga un enlace puede usarlo hasta que caduque, igual que quien ya ha visto la foto puede guardarla.
+  Al dejar de ser amigos o bloquear no se emiten enlaces nuevos.
+
+Al subir, solo se procesan `MEDIA_MAX_CONCURRENT` fotos a la vez (2 por defecto). Si hay más, la subida espera
+unos segundos y, si sigue sin hueco, la app muestra «inténtalo de nuevo en un momento» y conserva la foto.
+
 ## Revisión automática de fotos
 
 Cada foto se revisa antes de guardarse con un modelo abierto (CLIP) que corre en tu propio contenedor
@@ -223,6 +238,7 @@ SPRING_PROFILES_ACTIVE=h2 ./mvnw spring-boot:run
 | `crun: controller 'pids' is not available` al arrancar cualquier contenedor | Entra en la máquina con `podman machine ssh`, crea `/etc/containers/containers.conf.d/50-cgroupfs.conf` con las líneas `[engine]` y `cgroup_manager = "cgroupfs"`, y ejecuta `sudo systemctl restart podman.socket` |
 | Los contenedores están `healthy` pero `scripts\dev-services.ps1` dice que un puerto no responde | `podman machine stop`, luego `podman machine set --user-mode-networking=true`, luego `podman machine start` |
 | Se rechaza una foto normal de tu mascota | Revisa las puntuaciones con `python moderation/test_images.py carpeta-con-la-foto` y ajusta el umbral (ver `moderation/README.md`) |
+| Las fotos no cargan en un móvil pero sí en el ordenador | Los enlaces apuntan a `localhost`: pon en `S3_PUBLIC_ENDPOINT` la IP o el dominio con el que el móvil llega al almacenamiento |
 | La app muestra «No hay conexión con PawParazzi» | El backend no está en marcha, o la app apunta a otra dirección (ver «La app en otros dispositivos») |
 
 Los dos fallos de Podman de la tabla aparecieron con Podman 6.0.2 y WSL 3.0.1 en Windows 11. En el equipo

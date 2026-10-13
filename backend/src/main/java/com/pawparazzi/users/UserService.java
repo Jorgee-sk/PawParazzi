@@ -4,7 +4,7 @@ import com.pawparazzi.common.TimeZones;
 import com.pawparazzi.common.error.ApiException;
 import com.pawparazzi.media.MediaAsset;
 import com.pawparazzi.media.MediaService;
-import com.pawparazzi.media.MediaUrls;
+import com.pawparazzi.media.MediaLinks;
 import com.pawparazzi.pets.PetRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -19,12 +19,14 @@ public class UserService {
     private final UserRepository users;
     private final PetRepository pets;
     private final MediaService media;
+    private final MediaLinks links;
     private final Clock clock;
 
-    public UserService(UserRepository users, PetRepository pets, MediaService media, Clock clock) {
+    public UserService(UserRepository users, PetRepository pets, MediaService media, MediaLinks links, Clock clock) {
         this.users = users;
         this.pets = pets;
         this.media = media;
+        this.links = links;
         this.clock = clock;
     }
 
@@ -74,7 +76,7 @@ public class UserService {
 
     private UserDtos.MeResponse toMe(User u) {
         return new UserDtos.MeResponse(u.getId(), u.getEmail(), u.getUsername(), u.getDisplayName(),
-                MediaUrls.thumbnail(u.getAvatarMediaId()), u.getTimeZone(), u.isProfileCompleted(),
+                links.thumbnail(u.getId(), u.getAvatarMediaId()), u.getTimeZone(), u.isProfileCompleted(),
                 pets.countByOwnerId(u.getId()), u.getCreatedAt());
     }
 }

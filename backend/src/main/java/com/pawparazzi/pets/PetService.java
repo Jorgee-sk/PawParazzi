@@ -4,7 +4,7 @@ import com.pawparazzi.common.error.ApiException;
 import com.pawparazzi.friendships.FriendshipService;
 import com.pawparazzi.media.MediaAsset;
 import com.pawparazzi.media.MediaService;
-import com.pawparazzi.media.MediaUrls;
+import com.pawparazzi.media.MediaLinks;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,12 +27,15 @@ public class PetService {
     private final PetRepository pets;
     private final MediaService media;
     private final FriendshipService friendships;
+    private final MediaLinks links;
     private final Clock clock;
 
-    public PetService(PetRepository pets, MediaService media, FriendshipService friendships, Clock clock) {
+    public PetService(PetRepository pets, MediaService media, FriendshipService friendships, MediaLinks links,
+                      Clock clock) {
         this.pets = pets;
         this.media = media;
         this.friendships = friendships;
+        this.links = links;
         this.clock = clock;
     }
 
@@ -114,7 +117,7 @@ public class PetService {
         }
         return pets.findAllByIdIn(petIds).stream()
                 .map(p -> new PetDtos.PetSummary(p.getId(), p.getName(), p.getSpecies().name(),
-                        MediaUrls.thumbnail(p.getPhotoMediaId())))
+                        links.thumbnail(p.getOwnerId(), p.getPhotoMediaId())))
                 .collect(Collectors.toMap(PetDtos.PetSummary::id, Function.identity()));
     }
 
@@ -138,8 +141,8 @@ public class PetService {
     private PetDtos.PetResponse toResponse(Pet p, UUID viewerId) {
         return new PetDtos.PetResponse(p.getId(), p.getOwnerId(), p.getName(), p.getSpecies().name(), p.getBreed(),
                 p.getBirthDate(), p.getGender() == null ? null : p.getGender().name(), p.getDescription(),
-                new ArrayList<>(p.getTags()), MediaUrls.full(p.getPhotoMediaId()),
-                MediaUrls.thumbnail(p.getPhotoMediaId()), p.getOwnerId().equals(viewerId));
+                new ArrayList<>(p.getTags()), p.getPhotoMediaId(), links.full(p.getOwnerId(), p.getPhotoMediaId()),
+                links.thumbnail(p.getOwnerId(), p.getPhotoMediaId()), p.getOwnerId().equals(viewerId));
     }
 
     private static String blankToNull(String s) {

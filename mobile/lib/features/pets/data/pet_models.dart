@@ -26,6 +26,7 @@ class Pet {
     this.breed,
     this.birthDate,
     this.description,
+    this.photoMediaId,
     this.photoUrl,
     this.photoThumbnailUrl,
   });
@@ -38,6 +39,7 @@ class Pet {
   final DateTime? birthDate;
   final String? description;
   final List<String> tags;
+  final String? photoMediaId;
   final String? photoUrl;
   final String? photoThumbnailUrl;
   final bool isMine;
@@ -51,6 +53,7 @@ class Pet {
         birthDate: json['birthDate'] == null ? null : DateTime.parse(json['birthDate'] as String),
         description: json['description'] as String?,
         tags: (json['tags'] as List? ?? const []).cast<String>(),
+        photoMediaId: json['photoMediaId'] as String?,
         photoUrl: json['photoUrl'] as String?,
         photoThumbnailUrl: json['photoThumbnailUrl'] as String?,
         isMine: json['isMine'] as bool? ?? false,

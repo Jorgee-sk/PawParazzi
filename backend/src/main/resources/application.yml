@@ -65,6 +65,8 @@ pawparazzi:
       root: ${STORAGE_LOCAL_ROOT:./data/media}
     s3:
       endpoint: ${S3_ENDPOINT:http://localhost:8333}
+      # Dirección con la que la app llega al almacenamiento (o a la CDN). Vacío = la misma que endpoint.
+      public-endpoint: ${S3_PUBLIC_ENDPOINT:}
       region: ${S3_REGION:us-east-1}
       bucket: ${S3_BUCKET:pawparazzi-media}
       access-key: ${S3_ACCESS_KEY:}
@@ -77,6 +79,11 @@ pawparazzi:
     max-dimension: 2048
     thumbnail-dimension: 480
     jpeg-quality: 0.85
+    # Las imágenes se descargan con enlaces firmados que caducan.
+    link-ttl: ${MEDIA_LINK_TTL:PT6H}
+    # Procesar una foto grande puede ocupar cientos de MB: se limita cuántas se procesan a la vez.
+    max-concurrent-processing: ${MEDIA_MAX_CONCURRENT:2}
+    processing-wait: PT10S
   moderation:
     # Revisión automática de las fotos antes de guardarlas: ¿hay un animal?, ¿violencia o contenido sexual?
     # none = sin revisión (las fotos quedan como UNCHECKED)

@@ -16,7 +16,8 @@ import org.junit.jupiter.api.Test;
 public class ImageProcessorTest {
 
     private final ImageProcessor processor = new ImageProcessor(new AppProperties(null, null, null, null,
-            new AppProperties.Media(10 * 1024 * 1024, 50_000_000, 2048, 480, 0.85f), null, null));
+            new AppProperties.Media(10 * 1024 * 1024, 50_000_000, 2048, 480, 0.85f, java.time.Duration.ofHours(1), 2,
+                    java.time.Duration.ofSeconds(1)), null, null));
 
     @Test
     void stripsExifAndAppliesOrientation() throws IOException {

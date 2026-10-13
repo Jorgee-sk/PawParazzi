@@ -1,6 +1,6 @@
 package com.pawparazzi.users;
 
-import com.pawparazzi.media.MediaUrls;
+import com.pawparazzi.media.MediaLinks;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -14,9 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserDirectory {
 
     private final UserRepository users;
+    private final MediaLinks links;
 
-    public UserDirectory(UserRepository users) {
+    public UserDirectory(UserRepository users, MediaLinks links) {
         this.users = users;
+        this.links = links;
     }
 
     @Transactional(readOnly = true)
@@ -25,12 +27,12 @@ public class UserDirectory {
             return Map.of();
         }
         return users.findAllById(ids).stream()
-                .map(UserDirectory::toSummary)
+                .map(this::toSummary)
                 .collect(Collectors.toMap(UserDtos.UserSummary::id, Function.identity()));
     }
 
-    public static UserDtos.UserSummary toSummary(User u) {
+    public UserDtos.UserSummary toSummary(User u) {
         return new UserDtos.UserSummary(u.getId(), u.getUsername(), u.getDisplayName(),
-                MediaUrls.thumbnail(u.getAvatarMediaId()));
+                links.thumbnail(u.getId(), u.getAvatarMediaId()));
     }
 }

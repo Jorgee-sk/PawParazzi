@@ -3,7 +3,7 @@ package com.pawparazzi.moments;
 import com.pawparazzi.comments.CommentRepository;
 import com.pawparazzi.media.MediaAsset;
 import com.pawparazzi.media.MediaAssetRepository;
-import com.pawparazzi.media.MediaUrls;
+import com.pawparazzi.media.MediaLinks;
 import com.pawparazzi.pets.PetDtos;
 import com.pawparazzi.pets.PetService;
 import com.pawparazzi.reactions.ReactionRepository;
@@ -35,14 +35,16 @@ public class PostAssembler {
     private final MediaAssetRepository media;
     private final ReactionRepository reactions;
     private final CommentRepository comments;
+    private final MediaLinks links;
 
     public PostAssembler(UserDirectory users, PetService pets, MediaAssetRepository media,
-                         ReactionRepository reactions, CommentRepository comments) {
+                         ReactionRepository reactions, CommentRepository comments, MediaLinks links) {
         this.users = users;
         this.pets = pets;
         this.media = media;
         this.reactions = reactions;
         this.comments = comments;
+        this.links = links;
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +71,7 @@ public class PostAssembler {
         return posts.stream().map(p -> {
             MediaAsset image = images.get(p.getMediaId());
             PostDtos.ImageView imageView = image == null ? null : new PostDtos.ImageView(
-                    MediaUrls.full(image.getId()), MediaUrls.thumbnail(image.getId()),
+                    links.full(image.getOwnerId(), image.getId()), links.thumbnail(image.getOwnerId(), image.getId()),
                     image.getWidth(), image.getHeight());
             List<PetDtos.PetSummary> postPets = p.getPetIds().stream()
                     .map(petSummaries::get).filter(Objects::nonNull).toList();

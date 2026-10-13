@@ -25,7 +25,7 @@ public final class PetDtos {
     }
 
     public record PetResponse(UUID id, UUID ownerId, String name, String species, String breed, LocalDate birthDate,
-                              String gender, String description, List<String> tags, String photoUrl,
+                              String gender, String description, List<String> tags, UUID photoMediaId, String photoUrl,
                               String photoThumbnailUrl, boolean isMine) {
     }
 
